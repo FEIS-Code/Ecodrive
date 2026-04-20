@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ecodrive — FEIS</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛽</text></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap'); body{font-family:'Inter',sans-serif;}</style>
+</head>
+<body class="min-h-screen bg-gray-50">
+<header class="bg-white shadow-md p-3 sm:p-4 sticky top-0 z-20">
+  <div class="max-w-5xl mx-auto flex justify-between items-center">
+    <h1 class="text-base sm:text-xl font-extrabold"><span class="text-green-700">⛽ Ecodrive</span> <span class="text-gray-500 text-sm font-normal">Fuel Efficiency Tracker</span></h1>
+    <div class="flex items-center gap-2">
+      <span id="user-badge" class="hidden text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full"></span>
+      <button id="logout-btn" onclick="logout()" class="hidden px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold">Logout</button>
+    </div>
+  </div>
+</header>
+
+<!-- LOGIN -->
+<div id="login-screen" class="max-w-sm mx-auto mt-20 p-3">
+  <div class="bg-white rounded-xl shadow-lg p-6">
+    <h2 class="text-lg font-bold text-green-700 mb-4 text-center">⛽ Admin Login</h2>
+    <form id="login-form" class="space-y-3">
+      <input id="login-user" type="text" required placeholder="Username" class="w-full rounded-lg border p-2.5 text-sm">
+      <input id="login-pass" type="password" required placeholder="Password" class="w-full rounded-lg border p-2.5 text-sm">
+      <p id="login-error" class="text-red-600 text-xs hidden"></p>
+      <button type="submit" class="w-full py-2.5 bg-green-700 text-white font-semibold rounded-lg text-sm">Login</button>
+    </form>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="admin" class="hidden">
+  <div class="max-w-5xl mx-auto px-3 pt-3">
+    <div class="flex gap-1 border-b overflow-x-auto">
+      <button onclick="tab('entry')" data-tab="entry" class="tbtn px-3 py-2 text-xs sm:text-sm font-semibold border-b-2 border-green-700 text-green-700 whitespace-nowrap">📝 Daily Entry</button>
+      <button onclick="tab('readings')" data-tab="readings" class="tbtn px-3 py-2 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-gray-500 whitespace-nowrap">📋 Readings</button>
+      <button onclick="tab('usage')" data-tab="usage" class="tbtn px-3 py-2 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-gray-500 whitespace-nowrap">📊 Daily Usage</button>
+      <button onclick="tab('stats')" data-tab="stats" class="tbtn px-3 py-2 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-gray-500 whitespace-nowrap">🏆 Stats</button>
+      <button onclick="tab('settings')" data-tab="settings" class="tbtn px-3 py-2 text-xs sm:text-sm font-semibold border-b-2 border-transparent text-gray-500 whitespace-nowrap">⚙ Settings</button>
+    </div>
+  </div>
+  <main class="max-w-5xl mx-auto p-3 sm:p-6">
+
+    <!-- DAILY ENTRY TAB -->
+    <div id="t-entry">
+      <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row gap-3 mb-4 items-start sm:items-center">
+          <h2 class="font-bold text-lg text-gray-800">Closing Readings</h2>
+          <input id="entry-date" type="date" class="rounded-lg border p-2 text-sm" />
+          <button onclick="loadPrevious()" class="text-xs text-indigo-600 font-medium hover:underline">Load previous</button>
+        </div>
+        <div id="entry-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+        <button onclick="saveEntries()" id="save-btn" class="mt-4 w-full sm:w-auto px-6 py-2.5 bg-green-700 text-white font-semibold rounded-lg text-sm">Save All Readings</button>
+      </div>
+    </div>
+
+    <!-- READINGS HISTORY TAB -->
+    <div id="t-readings" class="hidden">
+      <div class="flex gap-2 mb-4">
+        <select id="readings-date" onchange="renderReadings()" class="px-3 py-2 border rounded-lg text-sm"><option value="">All Dates</option></select>
+      </div>
+      <div class="overflow-x-auto bg-white rounded-xl shadow">
+        <table class="w-full text-xs sm:text-sm">
+          <thead><tr class="bg-gray-50"><th class="p-2 text-left">Date</th><th class="p-2 text-left">Route</th><th class="p-2 text-right">Reading</th><th class="p-2 text-left">Notes</th></tr></thead>
+          <tbody id="readings-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DAILY USAGE TAB -->
+    <div id="t-usage" class="hidden">
+      <div class="flex gap-2 mb-4">
+        <select id="usage-route" onchange="renderUsage()" class="px-3 py-2 border rounded-lg text-sm"><option value="">All Routes</option></select>
+      </div>
+      <div class="overflow-x-auto bg-white rounded-xl shadow">
+        <table class="w-full text-xs sm:text-sm">
+          <thead><tr class="bg-gray-50"><th class="p-2 text-left">Date</th><th class="p-2 text-left">Route</th><th class="p-2 text-right">Prev</th><th class="p-2 text-right">Current</th><th class="p-2 text-right font-bold">Usage</th><th class="p-2 text-left">Notes</th></tr></thead>
+          <tbody id="usage-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STATS TAB -->
+    <div id="t-stats" class="hidden">
+      <div class="overflow-x-auto bg-white rounded-xl shadow">
+        <table class="w-full text-xs sm:text-sm">
+          <thead><tr class="bg-gray-50"><th class="p-2 text-left">Route</th><th class="p-2 text-right">Avg/Day</th><th class="p-2 text-right">Total</th><th class="p-2 text-right">Days</th><th class="p-2 text-right">Max</th><th class="p-2 text-right">Min</th></tr></thead>
+          <tbody id="stats-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="t-settings" class="hidden space-y-4">
+      <div class="bg-white rounded-xl shadow p-4">
+        <h3 class="font-bold text-sm mb-2">Routes</h3>
+        <div id="route-tags" class="flex flex-wrap gap-2 mb-2"></div>
+        <div class="flex gap-2"><input id="new-route" type="text" placeholder="e.g. R17" class="rounded border p-2 text-sm flex-1"><button onclick="addRoute()" class="text-green-700 text-sm font-medium">+ Add</button></div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="saveRouteSettings()" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold">Save</button>
+        <button onclick="runSetup()" class="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-semibold">Setup Data</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<footer class="max-w-5xl mx-auto px-3 py-6 text-center text-gray-500">
+  <p class="font-semibold mb-1">An App by <span class="text-green-700 font-bold">Team Ecodrive</span></p>
+  <p class="text-xs">Sai Srujan &amp; Anwitha (Grade 9) &bull; Likith Reddy &amp; Madhushree (Grade 8)</p>
+  <p class="text-xs">Rama Sathvik, Roshan Raj &amp; Rujula Shruti (Grade 7)</p>
+  <p class="text-xs text-gray-400 mt-1">Mentor: Ms. Madhuri</p>
+</footer>
+
+<script>
+const SCRIPT_URL='YOUR_SCRIPT_URL';
+let readings=[],routes=[],usageData=[],currentUser=null;
+const F=url=>fetch(url,{redirect:'follow'}).then(r=>r.json());
+const P=async(body)=>{try{const r=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain'},body:JSON.stringify({...body,auth:{username:currentUser.username,password:currentUser._pw}})});try{return await r.json();}catch(e){return{success:true};}}catch(e){return{success:true};}};
+function toast(msg){const t=document.createElement('div');t.className='fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}
+
+// Set today's date
+function initDate(){document.getElementById('entry-date').value=new Date().toISOString().split('T')[0];}
+
+async function loadData(){
+  const [rd,rt]=await Promise.all([F(SCRIPT_URL+'?action=readings'),F(SCRIPT_URL+'?action=routes')]);
+  readings=rd;routes=rt;
+  buildEntryGrid();
+  // Populate date filter
+  const dates=[...new Set(readings.map(r=>r.Date))].sort((a,b)=>new Date(b)-new Date(a));
+  document.getElementById('readings-date').innerHTML='<option value="">All Dates</option>'+dates.map(d=>`<option>${d}</option>`).join('');
+  document.getElementById('usage-route').innerHTML='<option value="">All Routes</option>'+routes.map(r=>`<option>${r}</option>`).join('');
+}
+
+function buildEntryGrid(){
+  document.getElementById('entry-grid').innerHTML=routes.map(r=>
+    `<div class="border rounded-lg p-3">
+      <label class="text-xs font-bold text-gray-700">${r}</label>
+      <input id="e-${r}" type="text" placeholder="Reading" class="w-full rounded border p-2 text-sm mt-1" inputmode="decimal">
+      <input id="n-${r}" type="text" placeholder="Notes (optional)" class="w-full rounded border p-1.5 text-xs mt-1 text-gray-500">
+    </div>`
+  ).join('');
+}
+
+function loadPrevious(){
+  const dateStr=document.getElementById('entry-date').value;
+  if(!dateStr) return;
+  const d=new Date(dateStr);
+  const formatted=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  readings.forEach(r=>{
+    if(r.Date===formatted){
+      const el=document.getElementById('e-'+r.Route);
+      const nl=document.getElementById('n-'+r.Route);
+      if(el) el.value=r.Reading||'';
+      if(nl) nl.value=r.Notes||'';
+    }
+  });
+  toast('Loaded readings for '+formatted);
+}
+
+async function saveEntries(){
+  const dateStr=document.getElementById('entry-date').value;
+  if(!dateStr){alert('Select a date');return;}
+  const d=new Date(dateStr);
+  const formatted=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  const entries=routes.map(r=>({route:r, reading:(document.getElementById('e-'+r)||{}).value||'', notes:(document.getElementById('n-'+r)||{}).value||''}));
+  const btn=document.getElementById('save-btn');btn.disabled=true;btn.textContent='Saving...';
+  await P({action:'saveReadings',date:formatted,entries});
+  btn.disabled=false;btn.textContent='Save All Readings';
+  toast('Saved readings for '+formatted);
+  setTimeout(loadData,1500);
+}
+
+// --- Readings History ---
+function renderReadings(){
+  const dateFilter=document.getElementById('readings-date').value;
+  const f=readings.filter(r=>!dateFilter||r.Date===dateFilter);
+  // Group by date
+  const grouped={};
+  f.forEach(r=>{if(!grouped[r.Date])grouped[r.Date]=[];grouped[r.Date].push(r);});
+  const dates=Object.keys(grouped).sort((a,b)=>new Date(b)-new Date(a));
+  document.getElementById('readings-body').innerHTML=dates.map(date=>
+    grouped[date].sort((a,b)=>{
+      const na=parseInt(a.Route.replace(/\D/g,''))||0,nb=parseInt(b.Route.replace(/\D/g,''))||0;return na-nb;
+    }).map((r,i)=>
+      `<tr class="border-t ${r.Notes?'bg-amber-50':''}">
+        ${i===0?`<td class="p-2 font-semibold" rowspan="${grouped[date].length}">${date}</td>`:''}
+        <td class="p-2">${r.Route}</td>
+        <td class="p-2 text-right font-mono">${r.Reading||'—'}</td>
+        <td class="p-2 text-xs ${r.Notes?'text-amber-600 font-medium':''}">${r.Notes||''}</td>
+      </tr>`
+    ).join('')
+  ).join('');
+}
+
+// --- Daily Usage ---
+async function renderUsage(){
+  usageData=await F(SCRIPT_URL+'?action=daily');
+  const routeFilter=document.getElementById('usage-route').value;
+  const f=usageData.filter(u=>!routeFilter||u.route===routeFilter);
+  document.getElementById('usage-body').innerHTML=f.map(u=>{
+    const val=parseFloat(u.usage);
+    const color=isNaN(val)?'text-gray-400':val>100?'text-red-600 font-bold':val>80?'text-amber-600 font-bold':'text-green-700 font-bold';
+    return `<tr class="border-t">
+      <td class="p-2">${u.date}</td>
+      <td class="p-2">${u.route}</td>
+      <td class="p-2 text-right font-mono text-gray-500">${u.prevReading}</td>
+      <td class="p-2 text-right font-mono">${u.reading}</td>
+      <td class="p-2 text-right ${color}">${u.usage||'N/A'}</td>
+      <td class="p-2 text-xs text-gray-500">${u.notes||''}</td>
+    </tr>`;
+  }).join('');
+}
+
+// --- Stats ---
+async function renderStats(){
+  const stats=await F(SCRIPT_URL+'?action=stats');
+  const sorted=Object.entries(stats).sort((a,b)=>{
+    const na=parseInt(a[0].replace(/\D/g,''))||0,nb=parseInt(b[0].replace(/\D/g,''))||0;return na-nb;
+  });
+  document.getElementById('stats-body').innerHTML=sorted.map(([route,s])=>
+    `<tr class="border-t">
+      <td class="p-2 font-semibold">${route}</td>
+      <td class="p-2 text-right font-mono">${s.avg}</td>
+      <td class="p-2 text-right font-mono">${s.total}</td>
+      <td class="p-2 text-right">${s.days}</td>
+      <td class="p-2 text-right font-mono text-red-600">${s.max}</td>
+      <td class="p-2 text-right font-mono text-green-600">${s.min}</td>
+    </tr>`
+  ).join('');
+}
+
+// --- Routes Settings ---
+function renderRoutes(){
+  document.getElementById('route-tags').innerHTML=routes.map((r,i)=>`<span class="inline-flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded-full text-xs">${r}<button onclick="routes.splice(${i},1);renderRoutes()" class="hover:text-red-500">&times;</button></span>`).join('');
+}
+function addRoute(){const v=document.getElementById('new-route').value.trim();if(v&&!routes.includes(v)){routes.push(v);renderRoutes();}document.getElementById('new-route').value='';}
+async function saveRouteSettings(){await P({action:'saveRoutes',items:routes});toast('Saved!');setTimeout(loadData,2000);}
+async function runSetup(){if(!confirm('Reset all data?'))return;await P({action:'setupData'});toast('Done!');setTimeout(loadData,3000);}
+
+// --- Tabs ---
+function tab(t){
+  ['entry','readings','usage','stats','settings'].forEach(id=>document.getElementById('t-'+id).classList.toggle('hidden',id!==t));
+  document.querySelectorAll('.tbtn').forEach(b=>{const a=b.dataset.tab===t;b.className=`tbtn px-3 py-2 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap ${a?'border-green-700 text-green-700':'border-transparent text-gray-500'}`;});
+  if(t==='readings')renderReadings();if(t==='usage')renderUsage();if(t==='stats')renderStats();if(t==='settings')renderRoutes();
+}
+
+// --- Auth ---
+async function handleLogin(e){
+  e.preventDefault();
+  const u=document.getElementById('login-user').value.trim(),p=document.getElementById('login-pass').value.trim();
+  try{
+    const r=await(await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'login',username:u,password:p})})).json();
+    if(r.success&&r.role==='admin'){currentUser={...r,_pw:p};sessionStorage.setItem('edAdmin',JSON.stringify(currentUser));showAdmin();}
+    else{document.getElementById('login-error').textContent=r.message||'Admin only';document.getElementById('login-error').classList.remove('hidden');}
+  }catch(e){document.getElementById('login-error').textContent='Error';document.getElementById('login-error').classList.remove('hidden');}
+}
+function logout(){currentUser=null;sessionStorage.removeItem('edAdmin');location.reload();}
+function showAdmin(){
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('admin').classList.remove('hidden');
+  document.getElementById('user-badge').textContent=currentUser.displayName;
+  document.getElementById('user-badge').classList.remove('hidden');
+  document.getElementById('logout-btn').classList.remove('hidden');
+  initDate();loadData();
+}
+
+window.onload=function(){
+  const s=sessionStorage.getItem('edAdmin');
+  if(s){currentUser=JSON.parse(s);showAdmin();}
+  document.getElementById('login-form').addEventListener('submit',handleLogin);
+};
+</script>
+</body>
+</html>
