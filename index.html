@@ -117,7 +117,7 @@
 </footer>
 
 <script>
-const SCRIPT_URL='YOUR_SCRIPT_URL';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyqyho5JDv3aJzP1Atq1RVRE-oV4Sn3hWnM9x1txOD3hzSPJbyvJ9fDaUe_9y2U8P0P/exec';
 let readings=[],routes=[],usageData=[],currentUser=null;
 const F=url=>fetch(url,{redirect:'follow'}).then(r=>r.json());
 const P=async(body)=>{try{const r=await fetch(SCRIPT_URL,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain'},body:JSON.stringify({...body,auth:{username:currentUser.username,password:currentUser._pw}})});try{return await r.json();}catch(e){return{success:true};}}catch(e){return{success:true};}};
